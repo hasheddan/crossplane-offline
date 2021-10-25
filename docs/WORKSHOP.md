@@ -79,6 +79,20 @@ sections should be able to be run without a network connection.
 kind create cluster --image hasheddan/cross-kind:v1.4.1-local
 ```
 
+You can check the status by looking at the pods in the kube-system namespace:
+```
+kubectl get pods -n kube-system
+NAME                                         READY   STATUS    RESTARTS   AGE
+coredns-558bd4d5db-bd7xm                     1/1     Running   0          28s
+coredns-558bd4d5db-w8lbd                     1/1     Running   0          28s
+etcd-kind-control-plane                      1/1     Running   0          40s
+kindnet-gzj86                                1/1     Running   0          28s
+kube-apiserver-kind-control-plane            1/1     Running   0          40s
+kube-controller-manager-kind-control-plane   1/1     Running   0          40s
+kube-proxy-7hvgx                             1/1     Running   0          28s
+kube-scheduler-kind-control-plane            1/1     Running   0          40s
+```
+
 ### 2. Install `k8scr-distribution`.
 
 ```
@@ -116,6 +130,12 @@ EOF
 kubectl apply -f k8scr-distribution.yaml
 ```
 
+This will install a pod in the default namespace:
+```
+kubectl get pods
+NAME    READY   STATUS    RESTARTS   AGE
+k8scr   1/1     Running   0          9s
+```
 
 ### 3. Install Crossplane.
 
@@ -134,16 +154,48 @@ EOF
 helm install crossplane -n crossplane-system --create-namespace ./crossplane-1.4.1.tgz -f crossplane-values.yaml
 ```
 
+You can check the Crossplane pods are up and running:
+```
+kubectl get pods -n crossplane-system
+NAME                                       READY   STATUS    RESTARTS   AGE
+crossplane-556965f687-69gd8                1/1     Running   0          7s
+crossplane-rbac-manager-55b5cb98f7-gzqkr   1/1     Running   0          7s
+```
+
+
 ### 4. Install Localstack.
 
 ```
 helm install localstack ./localstack-0.3.4.tgz --set startServices="s3" --set image.pullPolicy=Never
 ```
 
+You can check the localstack pod and it's logs:
+```
+kubectl get pods
+NAME                         READY   STATUS    RESTARTS   AGE
+k8scr                        1/1     Running   0          3m34s
+localstack-5d679bf9f-l72lm   1/1     Running   0          21s
+
+kubectl logs $(kubectl get pods -l app.kubernetes.io/name=localstack -o name) -f
+Waiting for all LocalStack services to be ready
+2021-10-25 16:53:43,561 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2021-10-25 16:53:43,570 INFO supervisord started with pid 29
+```
+
 ### 4. Push `provider-aws:v0.20.0` to in-cluster registry.
 
+This will push the provider-aws inot into the `k8scr` registry:
 ```
 kubectl k8scr push crossplane/provider-aws:v0.20.0
+```
+
+You can check the `k8scr` logs for activity on the container registry:
+```
+kubectl logs k8scr
+2021/10/25 16:52:21 GET /v2
+2021/10/25 16:52:22 HEAD /v2/crossplane/provider-aws/blobs/sha256:50e02ba0025001c951ee683c8a68960636b0fa6327fb88441fb3ba3223133fc6 404 BLOB_UNKNOWN Unknown blob
+2021/10/25 16:52:22 POST /v2/crossplane/provider-aws/blobs/uploads
+...
 ```
 
 ## Develop
