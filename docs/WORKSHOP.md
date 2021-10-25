@@ -29,7 +29,7 @@ The following images will be pre-loaded on the Kubernetes nodes:
 - `hasheddan/k8scr-distribution:latest`: this image is used to run a registry in
   the `kind` cluster that users can push `Configuration` image to.
 
-In addition we will pull (and later push) an image for the Crossplane package manger to use:
+In addition we will pull (and later push) an image for the Crossplane package manager to use:
 ```
 docker pull crossplane/provider-aws:v0.20.0
 ```
@@ -53,7 +53,7 @@ helm pull crossplane-stable/crossplane --version 1.4.1
 
 ### 3. Download `k8scr` CLI.
 
-For the Crossplane package manager we need to install a local container
+For the Crossplane package manager we need to install an in-cluster container
 registry. Use directions [here](https://github.com/hasheddan/k8scr#quickstart).
 
 > NOTE: `k8scr` download will be updated such that building the binary will not
@@ -184,7 +184,7 @@ Waiting for all LocalStack services to be ready
 
 ### 4. Push `provider-aws:v0.20.0` to in-cluster registry.
 
-This will push the provider-aws inot into the `k8scr` registry:
+This will push the `provider-aws` package image into the `k8scr` registry:
 ```
 kubectl k8scr push crossplane/provider-aws:v0.20.0
 ```
