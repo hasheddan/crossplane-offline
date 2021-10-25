@@ -1,12 +1,15 @@
 # Offline Workshop
 
 The following sections describe a workflow for running an offline Crossplane
-workshop. Please note that [Setup](#setup) must be done while network is still
-accessible.
+workshop with the AWS provider and [localstack](https://localstack.cloud/).
+Please note that [Setup](#setup) must be done while network is still accessible.
 
 ## Setup
 
-1. Pull `kind` image with required images pre-loaded.
+### 1. Pull `kind` image with required images pre-loaded.
+
+For this setup we are using [kind](https://kind.sigs.k8s.io/) for running local
+Kubernetes clusters with a dedicated image that has a set of images already included.
 
 ```
 docker pull hasheddan/cross-kind:v1.4.1-local
@@ -14,7 +17,7 @@ docker pull hasheddan/cross-kind:v1.4.1-local
 
 > NOTE: in the future, the `aws-cli-runtime` image will also be included.
 
-Pre-loaded images include:
+The following images will be pre-loaded on the Kubernetes nodes:
 - `hasheddan/crossplane-local:v1.4.1`: this image is a fork of
   `crossplane/crossplane:v1.4.1`, which includes the ability to trust a registry
   running in-cluster. It will be used when installing the Crossplane Helm chart.
@@ -26,11 +29,19 @@ Pre-loaded images include:
 - `hasheddan/k8scr-distribution:latest`: this image is used to run a registry in
   the `kind` cluster that users can push `Configuration` image to.
 
+In addition we will pull (and later push) an image for the Crossplane package manager to use:
 ```
 docker pull crossplane/provider-aws:v0.20.0
 ```
 
-2. Download Helm charts.
+> Note this open issue
+> [crossplane/crossplane/#2647](https://github.com/crossplane/crossplane/issues/2647)
+> which discusses also using node image cache for the package manager.
+
+### 2. Download Helm charts.
+
+There are two Helm charts which we need to prepare to install localstack and
+crossplane itself: 
 
 ```
 helm repo add localstack-repo https://localstack.github.io/helm-charts
@@ -40,14 +51,18 @@ helm repo add crossplane-stable https://charts.crossplane.io/stable
 helm pull crossplane-stable/crossplane --version 1.4.1
 ```
 
-3. Download `k8scr` CLI.
+### 3. Download `k8scr` CLI.
 
-Use directions [here](https://github.com/hasheddan/k8scr#quickstart).
+For the Crossplane package manager we need to install an in-cluster container
+registry. Use directions [here](https://github.com/hasheddan/k8scr#quickstart).
 
 > NOTE: `k8scr` download will be updated such that building the binary will not
 > be required. `go install` can be used for convenience today.
 
-4. Download Crossplane CLI.
+### 4. Download Crossplane CLI.
+
+The Crossplane CLI extends kubectl with functionality to build, push, and
+install Crossplane packages:
 
 ```
 curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | sh
@@ -58,13 +73,27 @@ curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.
 If all steps were followed correctly in [Setup](#setup), this and all following
 sections should be able to be run without a network connection.
 
-1. Create `kind` cluster with custom image.
+### 1. Create `kind` cluster with custom image.
 
 ```
 kind create cluster --image hasheddan/cross-kind:v1.4.1-local
 ```
 
-2. Install `k8scr-distribution`.
+You can check the status by looking at the pods in the kube-system namespace:
+```
+kubectl get pods -n kube-system
+NAME                                         READY   STATUS    RESTARTS   AGE
+coredns-558bd4d5db-bd7xm                     1/1     Running   0          28s
+coredns-558bd4d5db-w8lbd                     1/1     Running   0          28s
+etcd-kind-control-plane                      1/1     Running   0          40s
+kindnet-gzj86                                1/1     Running   0          28s
+kube-apiserver-kind-control-plane            1/1     Running   0          40s
+kube-controller-manager-kind-control-plane   1/1     Running   0          40s
+kube-proxy-7hvgx                             1/1     Running   0          28s
+kube-scheduler-kind-control-plane            1/1     Running   0          40s
+```
+
+### 2. Install `k8scr-distribution`.
 
 ```
 cat > "k8scr-distribution.yaml" << EOF
@@ -101,8 +130,14 @@ EOF
 kubectl apply -f k8scr-distribution.yaml
 ```
 
+This will install a pod in the default namespace:
+```
+kubectl get pods
+NAME    READY   STATUS    RESTARTS   AGE
+k8scr   1/1     Running   0          9s
+```
 
-3. Install Crossplane.
+### 3. Install Crossplane.
 
 ```
 cat > "crossplane-values.yaml" << EOF
@@ -119,21 +154,53 @@ EOF
 helm install crossplane -n crossplane-system --create-namespace ./crossplane-1.4.1.tgz -f crossplane-values.yaml
 ```
 
-4. Install Localstack.
+You can check the Crossplane pods are up and running:
+```
+kubectl get pods -n crossplane-system
+NAME                                       READY   STATUS    RESTARTS   AGE
+crossplane-556965f687-69gd8                1/1     Running   0          7s
+crossplane-rbac-manager-55b5cb98f7-gzqkr   1/1     Running   0          7s
+```
+
+
+### 4. Install Localstack.
 
 ```
 helm install localstack ./localstack-0.3.4.tgz --set startServices="s3" --set image.pullPolicy=Never
 ```
 
-4. Push `provider-aws:v0.20.0` to in-cluster registry.
+You can check the localstack pod and it's logs:
+```
+kubectl get pods
+NAME                         READY   STATUS    RESTARTS   AGE
+k8scr                        1/1     Running   0          3m34s
+localstack-5d679bf9f-l72lm   1/1     Running   0          21s
 
+kubectl logs $(kubectl get pods -l app.kubernetes.io/name=localstack -o name) -f
+Waiting for all LocalStack services to be ready
+2021-10-25 16:53:43,561 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2021-10-25 16:53:43,570 INFO supervisord started with pid 29
+```
+
+### 4. Push `provider-aws:v0.20.0` to in-cluster registry.
+
+This will push the `provider-aws` package image into the `k8scr` registry:
 ```
 kubectl k8scr push crossplane/provider-aws:v0.20.0
 ```
 
+You can check the `k8scr` logs for activity on the container registry:
+```
+kubectl logs k8scr
+2021/10/25 16:52:21 GET /v2
+2021/10/25 16:52:22 HEAD /v2/crossplane/provider-aws/blobs/sha256:50e02ba0025001c951ee683c8a68960636b0fa6327fb88441fb3ba3223133fc6 404 BLOB_UNKNOWN Unknown blob
+2021/10/25 16:52:22 POST /v2/crossplane/provider-aws/blobs/uploads
+...
+```
+
 ## Develop
 
-1. Create `Configuration` manifests in `./package` directory.
+### 1. Create `Configuration` manifests in `./package` directory.
 
 `crossplane.yaml`
 ```yaml
@@ -241,14 +308,14 @@ spec:
         - fromConnectionSecretKey: port
 ```
 
-2. Build `Configuration`.
+### 2. Build `Configuration`.
 
 ```
 cd configuration
 kubectl crossplane build configuration --name getting-started
 ```
 
-3. Push `Configuration`.
+### 3. Push `Configuration`.
 
 > NOTE: in the future, the docker load step should be able to be avoided.
 
@@ -259,7 +326,7 @@ docker tag <image-id-from-previous-command> myorg/getting-started:v0.0.1
 kubectl k8scr push myorg/getting-started:v0.0.1
 ```
 
-4. Install `Configuration`.
+### 4. Install `Configuration`.
 
 ```
 cat > "configuration.yaml" << EOF
