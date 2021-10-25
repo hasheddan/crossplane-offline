@@ -6,7 +6,7 @@ accessible.
 
 ## Setup
 
-1. Pull `kind` image with required images pre-loaded.
+### 1. Pull `kind` image with required images pre-loaded.
 
 ```
 docker pull hasheddan/cross-kind:v1.4.1-local
@@ -30,7 +30,7 @@ Pre-loaded images include:
 docker pull crossplane/provider-aws:v0.20.0
 ```
 
-2. Download Helm charts.
+### 2. Download Helm charts.
 
 ```
 helm repo add localstack-repo https://localstack.github.io/helm-charts
@@ -40,7 +40,7 @@ helm repo add crossplane-stable https://charts.crossplane.io/stable
 helm pull crossplane-stable/crossplane --version 1.4.1
 ```
 
-3. Download `k8scr` CLI.
+### 3. Download `k8scr` CLI.
 
 Use directions [here](https://github.com/hasheddan/k8scr#quickstart).
 
@@ -58,13 +58,13 @@ curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.
 If all steps were followed correctly in [Setup](#setup), this and all following
 sections should be able to be run without a network connection.
 
-1. Create `kind` cluster with custom image.
+### 1. Create `kind` cluster with custom image.
 
 ```
 kind create cluster --image hasheddan/cross-kind:v1.4.1-local
 ```
 
-2. Install `k8scr-distribution`.
+### 2. Install `k8scr-distribution`.
 
 ```
 cat > "k8scr-distribution.yaml" << EOF
@@ -102,7 +102,7 @@ kubectl apply -f k8scr-distribution.yaml
 ```
 
 
-3. Install Crossplane.
+### 3. Install Crossplane.
 
 ```
 cat > "crossplane-values.yaml" << EOF
@@ -119,13 +119,13 @@ EOF
 helm install crossplane -n crossplane-system --create-namespace ./crossplane-1.4.1.tgz -f crossplane-values.yaml
 ```
 
-4. Install Localstack.
+### 4. Install Localstack.
 
 ```
 helm install localstack ./localstack-0.3.4.tgz --set startServices="s3" --set image.pullPolicy=Never
 ```
 
-4. Push `provider-aws:v0.20.0` to in-cluster registry.
+### 4. Push `provider-aws:v0.20.0` to in-cluster registry.
 
 ```
 kubectl k8scr push crossplane/provider-aws:v0.20.0
@@ -133,7 +133,7 @@ kubectl k8scr push crossplane/provider-aws:v0.20.0
 
 ## Develop
 
-1. Create `Configuration` manifests in `./package` directory.
+### 1. Create `Configuration` manifests in `./package` directory.
 
 `crossplane.yaml`
 ```yaml
@@ -241,14 +241,14 @@ spec:
         - fromConnectionSecretKey: port
 ```
 
-2. Build `Configuration`.
+### 2. Build `Configuration`.
 
 ```
 cd configuration
 kubectl crossplane build configuration --name getting-started
 ```
 
-3. Push `Configuration`.
+### 3. Push `Configuration`.
 
 > NOTE: in the future, the docker load step should be able to be avoided.
 
@@ -259,7 +259,7 @@ docker tag <image-id-from-previous-command> myorg/getting-started:v0.0.1
 kubectl k8scr push myorg/getting-started:v0.0.1
 ```
 
-4. Install `Configuration`.
+### 4. Install `Configuration`.
 
 ```
 cat > "configuration.yaml" << EOF
