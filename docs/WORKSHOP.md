@@ -93,6 +93,23 @@ kube-proxy-7hvgx                             1/1     Running   0          28s
 kube-scheduler-kind-control-plane            1/1     Running   0          40s
 ```
 
+You can check the pre-installed images by shelling into the Kubernetes node and
+use
+[crictl](https://github.com/kubernetes-sigs/cri-tools/blob/master/docs/crictl.md)
+to list the images:
+
+```
+docker exec -it kind-control-plane /usr/local/bin/crictl images
+IMAGE                                          TAG                  IMAGE ID            SIZE
+docker.io/crossplane/provider-aws-controller   v0.20.0              57c08e6c0c61a       26.6MB
+docker.io/hasheddan/crossplane-local           v1.4.1               06f9b487637e0       10.6MB
+docker.io/hasheddan/k8scr-distribution         latest               f8b0c546cfd20       4.17MB
+docker.io/kindest/kindnetd                     v20210616-5aea9f9e   05f2f0375e54a       38.3MB
+docker.io/localstack/localstack                latest               e1cc5c887b0fa       357MB
+docker.io/luebken/aws-cli-runtime              latest               a294931690e14       177MB
+...
+```
+
 ### 2. Install `k8scr-distribution`.
 
 ```
