@@ -1,12 +1,15 @@
 # Offline Workshop
 
 The following sections describe a workflow for running an offline Crossplane
-workshop. Please note that [Setup](#setup) must be done while network is still
-accessible.
+workshop with the AWS provider and [localstack](https://localstack.cloud/).
+Please note that [Setup](#setup) must be done while network is still accessible.
 
 ## Setup
 
 ### 1. Pull `kind` image with required images pre-loaded.
+
+For this setup we are using [kind](https://kind.sigs.k8s.io/) for running local
+Kubernetes clusters with a dedicated image that has a set of images already included.
 
 ```
 docker pull hasheddan/cross-kind:v1.4.1-local
@@ -14,7 +17,7 @@ docker pull hasheddan/cross-kind:v1.4.1-local
 
 > NOTE: in the future, the `aws-cli-runtime` image will also be included.
 
-Pre-loaded images include:
+The following images will be pre-loaded on the Kubernetes nodes:
 - `hasheddan/crossplane-local:v1.4.1`: this image is a fork of
   `crossplane/crossplane:v1.4.1`, which includes the ability to trust a registry
   running in-cluster. It will be used when installing the Crossplane Helm chart.
@@ -26,11 +29,19 @@ Pre-loaded images include:
 - `hasheddan/k8scr-distribution:latest`: this image is used to run a registry in
   the `kind` cluster that users can push `Configuration` image to.
 
+In addition we will pull (and later push) an image for the Crossplane package manger to use:
 ```
 docker pull crossplane/provider-aws:v0.20.0
 ```
 
+> Note this open issue
+> [crossplane/crossplane/#2647](https://github.com/crossplane/crossplane/issues/2647)
+> which discusses also using node image cache for the package manager.
+
 ### 2. Download Helm charts.
+
+There are two Helm charts which we need to prepare to install localstack and
+crossplane itself: 
 
 ```
 helm repo add localstack-repo https://localstack.github.io/helm-charts
@@ -42,12 +53,16 @@ helm pull crossplane-stable/crossplane --version 1.4.1
 
 ### 3. Download `k8scr` CLI.
 
-Use directions [here](https://github.com/hasheddan/k8scr#quickstart).
+For the Crossplane package manager we need to install a local container
+registry. Use directions [here](https://github.com/hasheddan/k8scr#quickstart).
 
 > NOTE: `k8scr` download will be updated such that building the binary will not
 > be required. `go install` can be used for convenience today.
 
-4. Download Crossplane CLI.
+### 4. Download Crossplane CLI.
+
+The Crossplane CLI extends kubectl with functionality to build, push, and
+install Crossplane packages:
 
 ```
 curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | sh
