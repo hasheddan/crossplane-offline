@@ -215,6 +215,81 @@ kubectl logs k8scr
 ...
 ```
 
+## Develop and verify a simple S3 Bucket
+
+### 1. Install AWS-Provider and configure localstack
+
+```
+kubectl crossplane install provider crossplane/provider-aws:v0.20.0
+kubectl apply -f https://raw.githubusercontent.com/crossplane/provider-aws/master/examples/providerconfig/localstack.yaml
+kubectl patch providerconfig example --type=json --patch='[{"op": "replace", "path": "/spec/endpoint/url/static", "value": "http://localstack.default.svc.cluster.local:4566"}]'
+```
+
+### 2. Create an S3 Bucket
+
+```
+cat <<EOF | kubectl apply -f -
+apiVersion: s3.aws.crossplane.io/v1beta1
+kind: Bucket
+metadata:
+    name: test-bucket
+spec:
+    forProvider:
+        acl: public-read-write
+        locationConstraint: us-east-1
+    providerConfigRef:
+        name: example
+EOF
+```
+
+Check wether the bucket MR was created:
+```
+kubectl get bucket
+NAME          READY   SYNCED   AGE
+test-bucket   True    True     8s
+```
+
+Verify that the bucket was created in the localstack backend: 
+```
+kubectl run aws-cli-runtime --image=luebken/aws-cli-runtime
+kubectl exec --stdin --tty aws-cli-runtime -- /bin/bash
+
+# configure the aws cli for localstack setup
+# use test/test for key and secret and default for the rest
+aws configure
+...
+
+# point to the right endpoint
+aws --endpoint-url=http://localstack.default.svc.cluster.local:4566 s3 ls
+2021-10-25 20:44:28 test-bucket
+```
+
+### 3. Upload and test a website
+
+On `aws-cli-runtime`:
+
+Create html and upload it to the bucket:
+```
+echo "<html>hello from crossplane</html>" > index.html
+aws --endpoint-url=http://localstack.default.svc.cluster.local:4566 s3 cp index.html s3://test-bucket --acl public-read
+upload: ./index.html to s3://test-bucket/index.html
+```
+
+Verify the bucket has the html file:
+```
+aws --endpoint-url=http://localstack.default.svc.cluster.local:4566 s3api head-object --bucket test-bucket --key index.html
+{
+"LastModified": "2021-10-21T11:52:01+00:00",
+"ContentLength": 35,
+"ETag": "\"b785e6dedf26b0acefc463b9f12a74df\"",
+"ContentType": "text/html",
+"Metadata": {}
+}
+
+curl localstack.default.svc.cluster.local:4566/test-bucket/index.html
+<html>hello from crossplane</html>
+```
+
 ## Develop
 
 ### 1. Create `Configuration` manifests in `./package` directory.
