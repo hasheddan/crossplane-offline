@@ -9,7 +9,7 @@ accessible.
 1. Pull `kind` image with required images pre-loaded.
 
 ```
-docker pull hasheddan/cross-kind:1.4.1-local
+docker pull hasheddan/cross-kind:v1.4.1-local
 ```
 
 > NOTE: in the future, the `aws-cli-runtime` image will also be included.
