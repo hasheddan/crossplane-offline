@@ -303,7 +303,7 @@ test-bucket   True    True     8s
 
 Verify that the bucket was created in the localstack backend: 
 ```
-kubectl run aws-cli-runtime --image=luebken/aws-cli-runtime
+kubectl run aws-cli-runtime --image=luebken/aws-cli-runtime:latest --image-pull-policy='IfNotPresent'
 kubectl exec --stdin --tty aws-cli-runtime -- /bin/bash
 
 # configure the aws cli for localstack setup
