@@ -112,7 +112,7 @@ docker.io/luebken/aws-cli-runtime              latest               a294931690e1
 
 ### 2. Install `k8scr-distribution`.
 
-```
+```yaml
 cat > "k8scr-distribution.yaml" << EOF
 apiVersion: v1
 kind: Pod
@@ -143,7 +143,9 @@ spec:
       port: 443
       targetPort: 80
 EOF
+```
 
+```
 kubectl apply -f k8scr-distribution.yaml
 ```
 
@@ -156,7 +158,7 @@ k8scr   1/1     Running   0          9s
 
 ### 3. Install Crossplane.
 
-```
+```yaml
 cat > "crossplane-values.yaml" << EOF
 image:
     repository: hasheddan/crossplane-local
@@ -224,7 +226,7 @@ kubectl logs k8scr
 kubectl crossplane install provider crossplane/provider-aws:v0.20.0
 ```
 
-```
+```yaml
 cat > "localstack.yaml" << EOF
 ---
 # AWS credentials secret
@@ -256,7 +258,9 @@ spec:
       name: localstack-creds
       key: credentials
 EOF
+```
 
+```
 kubectl apply -f localstack.yaml
 secret/localstack-creds created
 providerconfig.aws.crossplane.io/example created
@@ -279,7 +283,7 @@ backups.dynamodb.aws.crossplane.io                         2021-10-26T09:46:59Z
 
 ### 2. Create an S3 Bucket
 
-```
+```yaml
 cat <<EOF | kubectl apply -f -
 apiVersion: s3.aws.crossplane.io/v1beta1
 kind: Bucket
@@ -342,7 +346,117 @@ curl localstack.default.svc.cluster.local:4566/test-bucket/index.html
 <html>hello from crossplane</html>
 ```
 
-## Develop
+## Develop a composition
+
+In this next step we want to leverage Crossplane feature of compositions to
+create a simplified version of a bucket which installs some guardrails which
+developers don't need to reason about and allows for operations to switch the
+implementation. 
+
+
+### 1. Create a CompositeResourceDefinition
+
+`definition.yaml`
+```yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xmybuckets.database.example.org
+spec:
+  group: database.example.org
+  names:
+    kind: XMyBucket
+    plural: xmybuckets
+  claimNames:
+    kind: MyBucket
+    plural: mybuckets
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  bucketName:
+                    type: string
+                required:
+                  - bucketName
+```
+
+You can find this new CRD as part of the rest of CRDs:
+```
+kubectl get crds | grep xmybuckets
+xmybuckets.database.example.org                            2021-10-26T12:59:27
+```
+
+### 2. Create a composition
+
+`composition.yaml`
+```yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xmybuckets.aws.database.example.org
+  labels:
+    provider: aws
+spec:
+  compositeTypeRef:
+    apiVersion: database.example.org/v1alpha1
+    kind: XMyBucket
+  resources:
+    - name: s3bucket
+      base:
+        apiVersion: s3.aws.crossplane.io/v1beta1
+        kind: Bucket
+        spec:
+          forProvider:
+            acl: public-read-write
+            locationConstraint: us-east-1
+          providerConfigRef:
+            name: example
+      patches:
+        - fromFieldPath: "spec.parameters.bucketName"
+          toFieldPath: "metadata.name"
+          transforms:
+            - type: string
+              string:
+                fmt: "org-example-%s"
+```
+
+```
+kubectl get composition
+``` 
+
+
+### 3. Create a claim
+
+`claim.yaml`
+```yaml
+apiVersion: example.org/v1alpha1
+kind: MyBucket
+metadata:
+  name: my-bucket
+  namespace: default
+spec:
+  compositionSelector:
+    matchLabels:
+      provider: aws
+  parameters:
+    bucketName: test-bucket
+```
+
+```
+kubectl get mybucket
+```
+
+## Develop a configuration
 
 ### 1. Create `Configuration` manifests in `./package` directory.
 
@@ -362,94 +476,6 @@ spec:
   dependsOn:
     - provider: crossplane/provider-aws
       version: "v0.20.0"
-```
-
-`definition.yaml`
-```yaml
-apiVersion: apiextensions.crossplane.io/v1
-kind: CompositeResourceDefinition
-metadata:
-  name: xpostgresqlinstances.database.example.org
-spec:
-  group: database.example.org
-  names:
-    kind: XPostgreSQLInstance
-    plural: xpostgresqlinstances
-  claimNames:
-    kind: PostgreSQLInstance
-    plural: postgresqlinstances
-  connectionSecretKeys:
-    - username
-    - password
-    - endpoint
-    - port
-  versions:
-  - name: v1alpha1
-    served: true
-    referenceable: true
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            properties:
-              parameters:
-                type: object
-                properties:
-                  storageGB:
-                    type: integer
-                required:
-                  - storageGB
-            required:
-              - parameters
-```
-
-`composition.yaml`
-```yaml
-apiVersion: apiextensions.crossplane.io/v1
-kind: Composition
-metadata:
-  name: xpostgresqlinstances.aws.database.example.org
-  labels:
-    provider: aws
-    guide: quickstart
-    vpc: default
-spec:
-  writeConnectionSecretsToNamespace: crossplane-system
-  compositeTypeRef:
-    apiVersion: database.example.org/v1alpha1
-    kind: XPostgreSQLInstance
-  resources:
-    - name: rdsinstance
-      base:
-        apiVersion: database.aws.crossplane.io/v1beta1
-        kind: RDSInstance
-        spec:
-          forProvider:
-            region: us-east-1
-            dbInstanceClass: db.t2.small
-            masterUsername: masteruser
-            engine: postgres
-            engineVersion: "12"
-            skipFinalSnapshotBeforeDeletion: true
-            publiclyAccessible: true
-          writeConnectionSecretToRef:
-            namespace: crossplane-system
-      patches:
-        - fromFieldPath: "metadata.uid"
-          toFieldPath: "spec.writeConnectionSecretToRef.name"
-          transforms:
-            - type: string
-              string:
-                fmt: "%s-postgresql"
-        - fromFieldPath: "spec.parameters.storageGB"
-          toFieldPath: "spec.forProvider.allocatedStorage"
-      connectionDetails:
-        - fromConnectionSecretKey: username
-        - fromConnectionSecretKey: password
-        - fromConnectionSecretKey: endpoint
-        - fromConnectionSecretKey: port
 ```
 
 ### 2. Build `Configuration`.
