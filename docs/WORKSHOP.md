@@ -15,8 +15,6 @@ Kubernetes clusters with a dedicated image that has a set of images already incl
 docker pull hasheddan/cross-kind:v1.4.1-local
 ```
 
-> NOTE: in the future, the `aws-cli-runtime` image will also be included.
-
 The following images will be pre-loaded on the Kubernetes nodes:
 - `hasheddan/crossplane-local:v1.4.1`: this image is a fork of
   `crossplane/crossplane:v1.4.1`, which includes the ability to trust a registry
@@ -28,6 +26,9 @@ The following images will be pre-loaded on the Kubernetes nodes:
   Helm chart.
 - `hasheddan/k8scr-distribution:latest`: this image is used to run a registry in
   the `kind` cluster that users can push `Configuration` image to.
+- `luebken/aws-cli-runtime:latest`: a Debian based image providing a shell and the
+  AWS CLI for manual interaction with localstack. 
+  
 
 In addition we will pull (and later push) an image for the Crossplane package manager to use:
 ```
