@@ -219,11 +219,63 @@ kubectl logs k8scr
 
 ### 1. Install AWS-Provider and configure localstack
 
+
 ```
 kubectl crossplane install provider crossplane/provider-aws:v0.20.0
-kubectl apply -f https://raw.githubusercontent.com/crossplane/provider-aws/master/examples/providerconfig/localstack.yaml
-kubectl patch providerconfig example --type=json --patch='[{"op": "replace", "path": "/spec/endpoint/url/static", "value": "http://localstack.default.svc.cluster.local:4566"}]'
 ```
+
+```
+cat > "localstack.yaml" << EOF
+---
+# AWS credentials secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: localstack-creds
+  namespace: crossplane-system
+type: Opaque
+data:
+  # This is just test/test.
+  credentials: W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkID0gdGVzdAphd3Nfc2VjcmV0X2FjY2Vzc19rZXkgPSB0ZXN0Cg==
+---
+# AWS provider that references the secrete credentials
+apiVersion: aws.crossplane.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: example
+spec:
+  endpoint:
+    hostnameImmutable: true
+    url:
+      type: Static
+      static: http://localstack.default.svc.cluster.local:4566
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: localstack-creds
+      key: credentials
+EOF
+
+kubectl apply -f localstack.yaml
+secret/localstack-creds created
+providerconfig.aws.crossplane.io/example created
+```
+
+You can check the new CRDs which are now available:
+```
+kubectl get crds | grep aws
+activities.sfn.aws.crossplane.io                           2021-10-26T09:47:02Z
+addresses.ec2.aws.crossplane.io                            2021-10-26T09:46:59Z
+apimappings.apigatewayv2.aws.crossplane.io                 2021-10-26T09:47:00Z
+apis.apigatewayv2.aws.crossplane.io                        2021-10-26T09:47:01Z
+authorizers.apigatewayv2.aws.crossplane.io                 2021-10-26T09:47:02Z
+backups.dynamodb.aws.crossplane.io                         2021-10-26T09:46:59Z
+...
+```
+
+> Note: you need to enable the respective services in localstack first.
+> Currently only S3 is enabled.
 
 ### 2. Create an S3 Bucket
 
