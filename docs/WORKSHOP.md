@@ -329,7 +329,7 @@ spec:
 ### 2. Build `Configuration`.
 
 ```
-cd configuration
+cd package
 kubectl crossplane build configuration --name getting-started
 ```
 
