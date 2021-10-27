@@ -298,7 +298,7 @@ spec:
 EOF
 ```
 
-Check wether the bucket MR was created:
+Check whether the bucket MR was created:
 ```
 kubectl get bucket
 NAME          READY   SYNCED   AGE
