@@ -396,7 +396,7 @@ kubectl get crds | grep xmybuckets
 xmybuckets.database.example.org                            2021-10-26T12:59:27
 ```
 
-### 2. Create a composition
+### 2. Create a Composition
 
 `composition.yaml`
 ```yaml
