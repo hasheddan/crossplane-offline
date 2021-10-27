@@ -390,6 +390,10 @@ spec:
                   - bucketName
 ```
 
+```
+kubectl apply -f definition.yaml
+```
+
 You can find this new CRD as part of the rest of CRDs:
 ```
 kubectl get crds | grep xmybuckets
@@ -430,8 +434,15 @@ spec:
                 fmt: "org-example-%s"
 ```
 
+
+```
+kubectl apply -f composition.yaml
+```
+
 ```
 kubectl get composition
+NAME                                  AGE
+xmybuckets.aws.database.example.org   22h
 ``` 
 
 
@@ -453,7 +464,13 @@ spec:
 ```
 
 ```
+kubectl apply -f claim.yaml
+```
+
+```
 kubectl get mybucket
+NAME        READY   CONNECTION-SECRET   AGE
+my-bucket   True                        22h
 ```
 
 ## Develop a configuration
