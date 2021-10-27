@@ -51,6 +51,8 @@ helm install crossplane -n crossplane-system --create-namespace ./crossplane-1.4
 
 helm install localstack ./localstack-0.3.4.tgz --set startServices="s3" --set image.pullPolicy=Never
 
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=localstack --timeout=30s
+
 kubectl k8scr push crossplane/provider-aws:v0.20.0
 
 kubectl crossplane install provider crossplane/provider-aws:v0.20.0
