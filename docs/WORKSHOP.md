@@ -475,6 +475,21 @@ my-bucket   True                        22h
 
 ## Develop a configuration
 
+In this section we are going to bundle the definitions we have created
+previously and ship and install them via a single configuration.
+
+Delete the resources on the cluster:
+```
+kubectl delete -f claim.yaml
+kubectl delete -f composition.yaml
+kubectl delete -f definition.yaml
+```
+
+Move the previously created files into a `.package` directory:
+```
+mkdir package; mv definition.yaml claim.yaml composition.yaml package/
+```
+
 ### 1. Create `Configuration` manifests in `./package` directory.
 
 `crossplane.yaml`
