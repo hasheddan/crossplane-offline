@@ -17,5 +17,6 @@ go install github.com/hasheddan/k8scr/cmd/k8scr@latest
 sudo mv ${GOPATH}/bin/k8scr /usr/local/bin/kubectl-k8scr
 
 curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | sh
+sudo mv kubectl-crossplane /usr/local/bin
 
 echo "\nYou can run offline now!"
