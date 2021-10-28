@@ -485,7 +485,7 @@ kubectl delete -f composition.yaml
 kubectl delete -f definition.yaml
 ```
 
-Move the previously created files into a `.package` directory:
+Move the previously created files into a `package` directory:
 ```
 mkdir package; mv definition.yaml claim.yaml composition.yaml package/
 ```
