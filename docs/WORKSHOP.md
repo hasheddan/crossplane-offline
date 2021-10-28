@@ -450,7 +450,7 @@ xmybuckets.aws.database.example.org   22h
 
 `claim.yaml`
 ```yaml
-apiVersion: example.org/v1alpha1
+apiVersion: database.example.org/v1alpha1
 kind: MyBucket
 metadata:
   name: my-bucket
@@ -530,7 +530,7 @@ kubectl k8scr push myorg/getting-started:v0.0.1
 
 ### 4. Install `Configuration`.
 
-```
+```yaml
 cat > "configuration.yaml" << EOF
 apiVersion: pkg.crossplane.io/v1
 kind: Configuration
