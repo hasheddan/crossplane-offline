@@ -240,7 +240,7 @@ data:
   # This is just test/test.
   credentials: W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkID0gdGVzdAphd3Nfc2VjcmV0X2FjY2Vzc19rZXkgPSB0ZXN0Cg==
 ---
-# AWS provider that references the secrete credentials
+# AWS ProviderConfig that references the secret credentials
 apiVersion: aws.crossplane.io/v1beta1
 kind: ProviderConfig
 metadata:
