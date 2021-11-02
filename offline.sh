@@ -56,3 +56,5 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=localstack --ti
 kubectl k8scr push crossplane/provider-aws:v0.20.0
 
 kubectl crossplane install provider crossplane/provider-aws:v0.20.0
+
+svn export https://github.com/crossplane/crossplane.git/trunk/docs crossplane-docs
