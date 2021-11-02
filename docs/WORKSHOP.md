@@ -69,6 +69,12 @@ install Crossplane packages:
 curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | sh
 ```
 
+### 5. Download documentation
+
+```
+svn export https://github.com/crossplane/crossplane.git/trunk/docs crossplane-docs
+```
+
 ## Install
 
 If all steps were followed correctly in [Setup](#setup), this and all following
